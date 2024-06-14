@@ -3,6 +3,7 @@ from typing import Tuple, List
 from dataclasses import dataclass
 from enum import Enum
 from logging import getLogger, basicConfig, INFO, DEBUG
+import re
 
 logger = getLogger(__name__)
 
@@ -34,7 +35,8 @@ class Token:
     checks: List[CheckResult]
     
     def __repr__(self) -> str:
-        # return f"{self.value}\t" + " \t".join([f"{check.type}: {check.value}" for check in self.checks if check.verdict])
+        if VERBOSE:
+            return f"{self.value}\t" + " \t".join([f"{check.type}: {check.value}" for check in self.checks if check.verdict])
         return f"{self.value}\t"
 
 @dataclass
@@ -42,7 +44,8 @@ class Partnumber:
     tokens: List[Token]
     
     def __repr__(self) -> str:
-        # return "\n".join([repr(token) for token in self.tokens])
+        if VERBOSE:
+            return "\n".join([repr(token) for token in self.tokens])
         return str(self.value())
     
     def value(self) -> int:
@@ -53,32 +56,12 @@ def _open_matrix(file_name):
     with open(Path(__file__).parent / file_name) as file:
         return [line.strip() for line in file.readlines()]
 
-def _parse_row_partnumbers(row: str, i: int) -> List[Partnumber]:
-    partnumber: Partnumber
-    partnumbers: List[Partnumber] = []
-    
-    on_a_token = False
-    for j, element in enumerate(row):
-        if not on_a_token:
-            partnumber = Partnumber(tokens=[])
-        if element.isnumeric():
-            partnumber.tokens.append(Token(element=(i, j), value=int(element), checks=[]))
-            on_a_token = True
-        else:
-            on_a_token = False
-            if partnumber.tokens:
-                partnumbers.append(partnumber)
-    if on_a_token and partnumber.tokens:
-        partnumbers.append(partnumber)
-    return partnumbers
-
-
 def _find_matrix_partnumbers(matrix: List[List[str]]) -> List[Partnumber]:
-    matrix_partnumbers = []
-    for i, row in enumerate(matrix):
-        matrix_partnumbers.extend(_parse_row_partnumbers(row, i))
-    return matrix_partnumbers
-
+    return [Partnumber(tokens=
+                       [Token(element=(i,j), value=matrix[i][j], checks=[]) for j in range(partnumbers.start(), partnumbers.end())]
+                       ) 
+            for i, row in enumerate(matrix) for partnumbers in re.finditer(r'\d+', row)]
+    
 def _create_left_pad_token(element, matrix):
     i, j = element[0], element[1]
     return Token(element=(i, j-1), value=matrix[i][j-1], checks=[])
@@ -89,9 +72,6 @@ def _create_right_pad_token(element, matrix):
 
 def _scan_partnumber(partnumber: Partnumber, matrix: List[List[str]]) -> Partnumber:
     logger.debug(f"partnumber: {partnumber}")
-    if partnumber.value() == 222:
-        #pdb.set_trace()
-        pass
     new_tokens = partnumber.tokens.copy()
     left_most_token = new_tokens.pop(0)
     _check_left_token(left_most_token, matrix)
@@ -196,15 +176,15 @@ def _evaluate_partnumber(check_span_tokens: List[Token]):
 
 if __name__ == "__main__":
     import pdb
-    basicConfig(level=INFO)
+    basicConfig(level=DEBUG)
+    VERBOSE = False
     matrix = _open_matrix("input.txt")
-    all_partnumbers = _find_matrix_partnumbers(matrix)
+    all_partnumbers = _find_matrix_partnumbers([matrix[0]])
     all_checked_partnumbers = []
     for partnumber in all_partnumbers:
         if checked_partnumber := _scan_partnumber(partnumber, matrix):
             logger.debug(f"checked_partnumber {checked_partnumber}")
             all_checked_partnumbers.append(checked_partnumber.value())
-    # logger.info(f"output_result:\n{all_checked_partnumbers}\n{sum(all_checked_partnumbers)}")
     print(all_checked_partnumbers, sum(all_checked_partnumbers))
     
     

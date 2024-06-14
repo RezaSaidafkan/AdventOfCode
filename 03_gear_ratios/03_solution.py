@@ -53,10 +53,6 @@ def _open_matrix(file_name):
     with open(Path(__file__).parent / file_name) as file:
         return [line.strip() for line in file.readlines()]
 
-def print_matrix(matrix):
-    for row in matrix:
-        print(row)
-
 def _parse_row_partnumbers(row: str, i: int) -> List[Partnumber]:
     partnumber: Partnumber
     partnumbers: List[Partnumber] = []
@@ -72,6 +68,8 @@ def _parse_row_partnumbers(row: str, i: int) -> List[Partnumber]:
             on_a_token = False
             if partnumber.tokens:
                 partnumbers.append(partnumber)
+    if on_a_token and partnumber.tokens:
+        partnumbers.append(partnumber)
     return partnumbers
 
 
@@ -91,8 +89,8 @@ def _create_right_pad_token(element, matrix):
 
 def _scan_partnumber(partnumber: Partnumber, matrix: List[List[str]]) -> Partnumber:
     logger.debug(f"partnumber: {partnumber}")
-    if partnumber.value() == 658:
-        # pdb.set_trace()
+    if partnumber.value() == 222:
+        #pdb.set_trace()
         pass
     new_tokens = partnumber.tokens.copy()
     left_most_token = new_tokens.pop(0)
@@ -108,15 +106,16 @@ def _scan_partnumber(partnumber: Partnumber, matrix: List[List[str]]) -> Partnum
     middle_tokens = new_tokens
     
     check_span_tokens: List[Token] = []
-    if not left_most_token.checks[0].verdict:
-        left_pad_element = _create_left_pad_token(left_most_token.element, matrix)
-        check_span_tokens.append(left_pad_element)
-        
+    
     check_span_tokens.extend([left_most_token, *middle_tokens])
+    if not left_most_token.checks[0].verdict and left_most_token.checks[0].reason != Reason.EDGE:
+        left_pad_element = _create_left_pad_token(left_most_token.element, matrix)
+        check_span_tokens.insert(0, left_pad_element)
+        
     if right_most_token:
         check_span_tokens.append(right_most_token)
         
-    if not right_most_token.checks[0].verdict:
+    if not right_most_token.checks[0].verdict and right_most_token.checks[0].reason != Reason.EDGE:
         right_pad_element = _create_right_pad_token(right_most_token.element, matrix)
         check_span_tokens.append(right_pad_element)
     
@@ -199,7 +198,6 @@ if __name__ == "__main__":
     import pdb
     basicConfig(level=INFO)
     matrix = _open_matrix("input.txt")
-    #print_matrix(matrix)
     all_partnumbers = _find_matrix_partnumbers(matrix)
     all_checked_partnumbers = []
     for partnumber in all_partnumbers:

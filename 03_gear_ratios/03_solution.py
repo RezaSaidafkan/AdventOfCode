@@ -34,14 +34,16 @@ class Token:
     checks: List[CheckResult]
     
     def __repr__(self) -> str:
-        return f"{self.value}\t" + " \t".join([f"{check.type}: {check.value}" for check in self.checks if check.verdict])
+        # return f"{self.value}\t" + " \t".join([f"{check.type}: {check.value}" for check in self.checks if check.verdict])
+        return f"{self.value}\t"
 
 @dataclass
 class Partnumber:
     tokens: List[Token]
     
     def __repr__(self) -> str:
-        return "\n".join([repr(token) for token in self.tokens])
+        # return "\n".join([repr(token) for token in self.tokens])
+        return str(self.value())
     
     def value(self) -> int:
         return int("".join([str(token.value) for token in self.tokens]))
@@ -89,21 +91,32 @@ def _create_right_pad_token(element, matrix):
 
 def _scan_partnumber(partnumber: Partnumber, matrix: List[List[str]]) -> Partnumber:
     logger.debug(f"partnumber: {partnumber}")
+    if partnumber.value() == 658:
+        # pdb.set_trace()
+        pass
     new_tokens = partnumber.tokens.copy()
     left_most_token = new_tokens.pop(0)
-    right_most_token = new_tokens.pop(-1)
+    _check_left_token(left_most_token, matrix)
+    
+    right_most_token: Token = None
+    if new_tokens:
+        right_most_token = new_tokens.pop(-1)
+    else:
+        right_most_token = left_most_token
+    _check_right_token(right_most_token, matrix)
+        
     middle_tokens = new_tokens
     
-    _check_left_token(left_most_token, matrix)
-    _check_right_token(right_most_token, matrix)
-    
     check_span_tokens: List[Token] = []
-    if left_most_token.checks[0].reason == Reason.VALUE and not left_most_token.checks[0].verdict:
+    if not left_most_token.checks[0].verdict:
         left_pad_element = _create_left_pad_token(left_most_token.element, matrix)
         check_span_tokens.append(left_pad_element)
         
-    check_span_tokens.extend([left_most_token, *middle_tokens, right_most_token])
-    if right_most_token.checks[0].reason == Reason.VALUE and not right_most_token.checks[0].verdict:
+    check_span_tokens.extend([left_most_token, *middle_tokens])
+    if right_most_token:
+        check_span_tokens.append(right_most_token)
+        
+    if not right_most_token.checks[0].verdict:
         right_pad_element = _create_right_pad_token(right_most_token.element, matrix)
         check_span_tokens.append(right_pad_element)
     
@@ -183,16 +196,17 @@ def _evaluate_partnumber(check_span_tokens: List[Token]):
     
 
 if __name__ == "__main__":
+    import pdb
     basicConfig(level=INFO)
-    matrix = _open_matrix("Example3.txt")
-    print_matrix(matrix)
+    matrix = _open_matrix("input.txt")
+    #print_matrix(matrix)
     all_partnumbers = _find_matrix_partnumbers(matrix)
     all_checked_partnumbers = []
     for partnumber in all_partnumbers:
         if checked_partnumber := _scan_partnumber(partnumber, matrix):
             logger.debug(f"checked_partnumber {checked_partnumber}")
             all_checked_partnumbers.append(checked_partnumber.value())
-        
-    logger.info(f"output_result: {sum(all_checked_partnumbers)}")
+    # logger.info(f"output_result:\n{all_checked_partnumbers}\n{sum(all_checked_partnumbers)}")
+    print(all_checked_partnumbers, sum(all_checked_partnumbers))
     
     

@@ -1,0 +1,4 @@
+* its beneficial to use Pydantic models for parsing text, you can construct your model and validate the parsing easier. 
+* its super nice to use `Rich` library for printing matrices & parsing data
+* this problem's design was very smart! at first it lures you into creating a map table. but this approach is terrible on big inputs. so you have to convert it into runtime conversion functions.
+* I've kept the map table functions in the code as well.
